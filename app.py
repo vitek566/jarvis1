@@ -11,8 +11,8 @@ if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     try:
-        # Stabilní a rychlý model pro bezplatné API
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Použití aktuálního modelu doporučeného Googlem
+        model = genai.GenerativeModel("gemini-3.8-flash")
     except Exception as e:
         st.error(f"Chyba při inicializaci modelu: {e}")
 

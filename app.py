@@ -11,7 +11,8 @@ st.write("Nahraj fotku nebo PDF skriptů, vygeneruj bleskovou 5-minutovku a pak 
 # Načtení klíče ze zabezpečeného úložiště Streamlitu
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # Aktualizovaný model na aktuálně podporovaný
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     # Inicializace stavu chatu
     if "chat_history" not in st.session_state:
@@ -53,11 +54,7 @@ if "GEMINI_API_KEY" in st.secrets:
                         "Jdi rovnou k věci."
                     )
                     
-                    if file_type == "pdf":
-                        response = model.generate_content([prompt, file_content])
-                    else:
-                        response = model.generate_content([prompt, file_content])
-                        
+                    response = model.generate_content([prompt, file_content])
                     st.session_state.extracted_data = response.text
                     
                     # Spuštění kontextového chatu pro zkoušení

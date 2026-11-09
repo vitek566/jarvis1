@@ -11,8 +11,8 @@ st.write("Nahraj fotku nebo PDF skriptů, vygeneruj bleskovou 5-minutovku a pak 
 # Načtení klíče ze zabezpečeného úložiště Streamlitu
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # Aktualizovaný model na aktuálně podporovaný
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    # Aktualizovaný model podle chybové hlášky od Googlu
+    model = genai.GenerativeModel("gemini-3.8-flash")
 
     # Inicializace stavu chatu
     if "chat_history" not in st.session_state:

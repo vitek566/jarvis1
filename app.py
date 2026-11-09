@@ -6,13 +6,13 @@ import pypdf
 st.set_page_config(page_title="AI Studijní Asistent", page_icon="⚡", layout="wide")
 st.title("⚡ AI Studijní Asistent – Rychlý test")
 
-# Kontrola klíče
+# Kontrola klíče v Secrets
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # Inicializace modelu
     try:
-        model = genai.GenerativeModel("gemini-3.8-flash")
+        # Stabilní a rychlý model pro bezplatné API
+        model = genai.GenerativeModel("gemini-1.5-flash")
     except Exception as e:
         st.error(f"Chyba při inicializaci modelu: {e}")
 
@@ -31,9 +31,9 @@ if "GEMINI_API_KEY" in st.secrets:
                 
                 if text_data.strip():
                     file_data = text_data
-                    st.success(f"PDF úspěšně přečteno ({len(reader.pages)} stran, nalezen text).")
+                    st.success(f"PDF úspěšně přečteno ({len(reader.pages)} stran).")
                 else:
-                    st.error("PDF neobsahuje žádný text k přečtení (pravděpodobně je to naskenovaný obrázek).")
+                    st.error("PDF neobsahuje text (je to pravděpodobně naskenovaný obrázek).")
             except Exception as e:
                 st.error(f"Chyba při čtení PDF: {e}")
         else:
@@ -43,9 +43,9 @@ if "GEMINI_API_KEY" in st.secrets:
             except Exception as e:
                 st.error(f"Chyba při načítání obrázku: {e}")
 
-        # Tlačítko pro spuštění
+        # Tlačítko pro spuštění generování
         if file_data and st.button("🚀 Vygenerovat 5-minutovku"):
-            with st.spinner("AI zpracovává data (může to trvat 3-5 sekund)..."):
+            with st.spinner("AI pročesává materiály... (trvá to cca 2 vteřiny)"):
                 try:
                     prompt = (
                         "Jsi efektivní studijní asistent. "
@@ -55,13 +55,12 @@ if "GEMINI_API_KEY" in st.secrets:
                         "Jdi rovnou k věci."
                     )
                     
-                    # Odeslání požadavku na Gemini
                     response = model.generate_content([prompt, file_data])
                     
                     st.subheader("📝 Výsledek od AI:")
                     st.markdown(response.text)
                     
                 except Exception as e:
-                    st.error(f"Chyba při komunikaci s Google Gemini API: {e}")
+                    st.error(f"Chyba při komunikaci s Gemini API: {e}")
 else:
     st.warning("V aplikaci není nastaven API klíč. Zkontroluj si nastavení v Secrets ve Streamlitu.")

@@ -11,7 +11,7 @@ if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     try:
-        # Použití univerzálního aliasu pro maximální stabilitu bez chyb 404
+        # Stabilní model pro bezproblémové API
         model = genai.GenerativeModel("gemini-flash-latest")
     except Exception as e:
         st.error(f"Chyba při inicializaci modelu: {e}")
@@ -28,7 +28,7 @@ if "GEMINI_API_KEY" in st.secrets:
                 reader = pypdf.PdfReader(uploaded_file)
                 text_data = ""
                 
-                # Omezení na prvních 10 stran pro rychlé zpracování (řeší zasekávání)
+                # Omezení na prvních 10 stran pro maximální rychlost
                 max_pages = min(len(reader.pages), 10)
                 for i in range(max_pages):
                     text_data += reader.pages[i].extract_text() or ""
@@ -47,15 +47,19 @@ if "GEMINI_API_KEY" in st.secrets:
             except Exception as e:
                 st.error(f"Chyba při načítání obrázku: {e}")
 
-        # Inicializace chatu v session state, pokud ještě neexistuje
-        if "chat_session" not in st.session_state:
-            st.session_state.chat = None
+        # Inicializace stavu chatu v session
         if "messages" not in st.session_state:
             st.session_state.messages = []
+        if "material_cache" not in st.session_state:
+            st.session_state.material_cache = None
 
-        # Tlačítko pro spuštění vygenerování 5-minutovky
-        if file_data and st.button("🚀 Vygenerovat 5-minutovku a spustit chat"):
-            with st.spinner("AI připravuje test a analyzuje materiál... (trvá 2-3 sekundy)"):
+        # Uložíme si data materiálu do paměti relace
+        if file_data:
+            st.session_state.material_cache = file_data
+
+        # Tlačítko pro spuštění vygenerování 5-minutovky (používá přímé volání bez timeoutu)
+        if st.session_state.material_cache and st.button("🚀 Vygenerovat 5-minutovku"):
+            with st.spinner("AI připravuje test... (trvá 2-3 sekundy)"):
                 try:
                     prompt = (
                         "Jsi efektivní studijní asistent. "
@@ -65,43 +69,48 @@ if "GEMINI_API_KEY" in st.secrets:
                         "Jdi rovnou k věci."
                     )
                     
-                    # Vytvoříme novou chat session s materiálem v kontextu
-                    chat = model.start_chat(history=[])
-                    st.session_state.chat = chat
-                    st.session_state.messages = [] # reset historie pro nový soubor
-                    
-                    # Odeslání prvotního pokynu s daty
-                    response = chat.send_message([prompt, file_data])
+                    # Přímé vygenerování odpovědi (vyhýbá se chybám start_chat)
+                    response = model.generate_content([prompt, st.session_state.material_cache])
                     
                     # Uložení do historie zpráv
-                    st.session_state.messages.append({"role": "user", "content": "Vygeneruj 5-minutovku z materiálu."})
-                    st.session_state.messages.append({"role": "model", "content": response.text})
+                    st.session_state.messages = [
+                        {"role": "user", "content": "Vygeneruj 5-minutovku z nahraného materiálu."},
+                        {"role": "assistant", "content": response.text}
+                    ]
                     
                 except Exception as e:
                     st.error(f"Chyba při komunikaci s Gemini API: {e}")
 
-        # Pokud již proběhla inicializace chatu, zobrazíme interaktivní konverzaci
-        if st.session_state.get("chat_session") is not None:
+        # Zobrazení historie konverzace a doplňujícího chatu
+        if st.session_state.messages:
             st.markdown("---")
-            st.subheader("💬 Interaktivní zkoušení a doplňující dotazy")
+            st.subheader("💬 Výsledek a interaktivní zkoušení")
             
-            # Zobrazení dosavadní historie zpráv
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
             
-            # Chatové okno dole
-            if user_input := st.chat_input("Zeptej se na cokoliv z materiálu nebo požádej o vyzkoušení..."):
+            # Doplňující otázky
+            if user_input := st.chat_input("Zeptej se na cokoliv z materiálu..."):
                 st.session_state.messages.append({"role": "user", "content": user_input})
                 with st.chat_message("user"):
                     st.markdown(user_input)
                     
-                with st.chat_message("model"):
+                with st.chat_message("assistant"):
                     with st.spinner("AI přemýšlí..."):
                         try:
-                            response = st.session_state.chat.send_message(user_input)
+                            # Sestavíme kontext z historie pro navazující dotaz
+                            full_prompt = [
+                                "Tady je studijní materiál, o kterém se bavíme:",
+                                st.session_state.material_cache,
+                                "Historie konverzace:"
+                            ]
+                            for m in st.session_state.messages:
+                                full_prompt.append(f"{m['role']}: {m['content']}")
+                            
+                            response = model.generate_content(full_prompt)
                             st.markdown(response.text)
-                            st.session_state.messages.append({"role": "model", "content": response.text})
+                            st.session_state.messages.append({"role": "assistant", "content": response.text})
                         except Exception as e:
                             st.error(f"Chyba v chatu: {e}")
 else:
